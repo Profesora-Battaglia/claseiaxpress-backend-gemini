@@ -8,8 +8,18 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Initialize Google AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Google AI with error handling
+let genAI;
+try {
+  console.log('Initializing GoogleGenerativeAI...');
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is not set.');
+  }
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  console.log('GoogleGenerativeAI initialized successfully.');
+} catch (error) {
+  console.error('!!! CRITICAL: Failed to initialize GoogleGenerativeAI:', error.message);
+}
 
 // --- Helper function for streaming responses ---
 async function streamToResponse(iterableStream, res) {
@@ -17,7 +27,6 @@ async function streamToResponse(iterableStream, res) {
   res.setHeader('Transfer-Encoding', 'chunked');
   try {
     for await (const chunk of iterableStream) {
-      // Check if chunk and chunk.text are valid before calling text()
       if (chunk && typeof chunk.text === 'function') {
         res.write(chunk.text());
       }
@@ -25,7 +34,6 @@ async function streamToResponse(iterableStream, res) {
     res.end();
   } catch (error) {
     console.error('Error streaming response:', error);
-    // Ensure response is ended properly on error
     if (!res.headersSent) {
       res.status(500).send('Error streaming response');
     } else {
@@ -34,13 +42,15 @@ async function streamToResponse(iterableStream, res) {
   }
 }
 
-// --- /api/generate endpoint ---
+// --- API endpoints ---
 app.post('/api/generate', async (req, res) => {
+  if (!genAI) {
+    return res.status(500).json({ error: 'Google AI SDK not initialized. Check server logs for details.' });
+  }
   const { prompt } = req.body;
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const result = await model.generateContentStream(prompt);
@@ -51,18 +61,17 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// --- /api/chat endpoint ---
 app.post('/api/chat', async (req, res) => {
+  if (!genAI) {
+    return res.status(500).json({ error: 'Google AI SDK not initialized. Check server logs for details.' });
+  }
   const { history, message } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
   }
-
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const chat = model.startChat({
-      history: history || [],
-    });
+    const chat = model.startChat({ history: history || [] });
     const result = await chat.sendMessageStream(message);
     streamToResponse(result.stream, res);
   } catch (error) {
@@ -73,9 +82,12 @@ app.post('/api/chat', async (req, res) => {
 
 // --- Root endpoint ---
 app.get('/', (req, res) => {
-  res.send('Backend Gemini is running!');
+  if (!genAI) {
+    res.status(500).send('Backend is running, but Google AI SDK failed to initialize. Check server logs.');
+  } else {
+    res.send('Backend Gemini is running and AI is initialized!');
+  }
 });
-
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
