@@ -1,14 +1,11 @@
-
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-
+const cors = require('cors');
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
 // Middleware manual para CORS y OPTIONS
 app.use((req, res, next) => {
@@ -21,31 +18,44 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/generate', async (req, res) => {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API Key no configurada' });
-    }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const { prompt } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt requerido' });
-    }
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    res.status(200).json({ result: text });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+// Initialize Google AI with error handling
+let genAI;
+try {
+  console.log('Initializing GoogleGenerativeAI...');
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is not set.');
   }
-});
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  console.log('GoogleGenerativeAI initialized successfully.');
+} catch (error) {
+  console.error('!!! CRITICAL: Failed to initialize GoogleGenerativeAI:', error.message);
+}
 
-app.get('/', (req, res) => {
-  res.send('Servidor Express funcionando. Endpoint: POST /api/generate');
-});
+// --- Helper function for streaming responses ---
+async function streamToResponse(iterableStream, res) {
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  try {
+    for await (const chunk of iterableStream) {
+      if (chunk && typeof chunk.text === 'function') {
+        res.write(chunk.text());
+      }
+    }
+    res.end();
+  } catch (error) {
+    console.error('Error streaming response:', error);
+    if (!res.headersSent) {
+      res.status(500).send('Error streaming response');
+    } else {
+      res.end();
+    }
+  }
+}
 
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
+// --- API endpoints ---
+app.post('/api/generate', async (req, res) => {
+  if (!genAI) {
+    return res.status(500).json({ error: 'Google AI SDK not initialized. Check server logs for details.' });
+  }
+  // ...resto de tu endpoint...
 });
