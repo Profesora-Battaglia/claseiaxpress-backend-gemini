@@ -1,27 +1,19 @@
-
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+// api/generate.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-app.use(cors());
-app.use(express.json());
-
-// Middleware manual para CORS y OPTIONS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
-  next();
-});
 
-app.post('/api/generate', async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método no permitido' });
+  }
+
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -40,12 +32,4 @@ app.post('/api/generate', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
-
-app.get('/', (req, res) => {
-  res.send('Servidor Express funcionando. Endpoint: POST /api/generate');
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
-});
+};
