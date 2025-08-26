@@ -2,9 +2,6 @@
   "functions": {
     "api/**/*.js": {
       "runtime": "nodejs@18.x"
-    },
-    "index.js": {
-      "exclude": true
     }
   },
   "headers": [
