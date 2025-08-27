@@ -15,7 +15,7 @@ async function generateContent(prompt) {
   if (!genAI) {
     throw new Error('Google AI SDK not initialized.');
   }
-  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
@@ -24,7 +24,7 @@ async function generateContentStream(prompt) {
     if (!genAI) {
         throw new Error('Google AI SDK not initialized.');
     }
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     const result = await model.generateContentStream(prompt);
     return result.stream;
 }
