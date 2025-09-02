@@ -4,10 +4,15 @@ const { generateContent } = require('../gemini.js');
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.APP_API_KEY) {
+    return res.status(401).json({ error: 'No autorizado' });
   }
 
   if (req.method !== 'POST') {
