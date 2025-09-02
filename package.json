@@ -2,6 +2,7 @@
   "name": "claseiaxpress-backend-gemini",
   "version": "1.0.0",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "firebase-admin": "^13.5.0"
   }
 }
