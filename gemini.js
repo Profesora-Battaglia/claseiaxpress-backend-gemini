@@ -1,6 +1,8 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const admin = require('firebase-admin'); // Import firebase-admin
 
 let genAI;
+let firebaseApp; // Variable to hold Firebase app instance
 
 try {
   if (!process.env.GEMINI_API_KEY) {
@@ -10,6 +12,21 @@ try {
 } catch (error) {
   console.error('!!! CRITICAL: Failed to initialize GoogleGenerativeAI:', error.message);
 }
+
+// Initialize Firebase Admin SDK
+try {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+  }
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  firebaseApp = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log('Firebase Admin SDK initialized successfully.');
+} catch (error) {
+  console.error('!!! CRITICAL: Failed to initialize Firebase Admin SDK:', error.message);
+}
+
 
 async function generateContent(prompt) {
   if (!genAI) {
@@ -29,4 +46,5 @@ async function generateContentStream(prompt) {
     return result.stream;
 }
 
-module.exports = { generateContent, generateContentStream };
+// Export admin object for use in other modules
+module.exports = { generateContent, generateContentStream, admin };
